@@ -6,6 +6,7 @@ var inherits = require('inherits')
 var Connection = require('mqtt-connection')
 var MqttServer
 var MqttSecureServer
+var enableDestroy = require('server-destroy')
 
 function setupConnection (duplex) {
   var connection = new Connection(duplex)
@@ -30,6 +31,7 @@ MqttServer = module.exports = function Server (listener) {
     this.on('client', listener)
   }
 
+  enableDestroy(this)
   return this
 }
 inherits(MqttServer, net.Server)
@@ -59,7 +61,13 @@ MqttSecureServer = module.exports.SecureServer =
     }
 
     this.on('secureConnection', setupConnection)
-
+    enableDestroy(this)
     return this
   }
 inherits(MqttSecureServer, tls.Server)
+
+module.exports.simpleServer = function simpleServer () {
+  var server = net.createServer.apply(null, arguments)
+  enableDestroy(server)
+  return server
+}

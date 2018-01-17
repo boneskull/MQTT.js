@@ -100,18 +100,33 @@ module.exports = function (server, config) {
   })
 
   describe('connecting', function () {
-    it('should connect to the broker', function (done) {
-      var client = connect()
+    var client
+
+    beforeEach(function () {
+      client = null
+    })
+
+    afterEach(function (done) {
+      if (client) {
+        if (client.connected) {
+          client.end(done)
+          return
+        }
+      }
+      done()
+    })
+
+    it.only('should connect to the broker', function (done) {
+      client = connect()
       client.on('error', done)
 
       server.once('client', function () {
-        client.end()
         done()
       })
     })
 
     it('should send a default client id', function (done) {
-      var client = connect()
+      client = connect()
       client.on('error', done)
 
       server.once('client', function (serverClient) {
@@ -124,7 +139,7 @@ module.exports = function (server, config) {
     })
 
     it('should send be clean by default', function (done) {
-      var client = connect()
+      client = connect()
       client.on('error', done)
 
       server.once('client', function (serverClient) {
@@ -137,7 +152,7 @@ module.exports = function (server, config) {
     })
 
     it('should connect with the given client id', function (done) {
-      var client = connect({clientId: 'testclient'})
+      client = connect({clientId: 'testclient'})
       client.on('error', function (err) {
         throw err
       })
@@ -152,7 +167,7 @@ module.exports = function (server, config) {
     })
 
     it('should connect with the client id and unclean state', function (done) {
-      var client = connect({clientId: 'testclient', clean: false})
+      client = connect({clientId: 'testclient', clean: false})
       client.on('error', function (err) {
         throw err
       })
@@ -169,7 +184,7 @@ module.exports = function (server, config) {
 
     it('should require a clientId with clean=false', function (done) {
       try {
-        var client = connect({ clean: false })
+        client = connect({ clean: false })
         client.on('error', function (err) {
           done(err)
           // done(new Error('should have thrown'));
@@ -180,7 +195,7 @@ module.exports = function (server, config) {
     })
 
     it('should default to localhost', function (done) {
-      var client = connect({clientId: 'testclient'})
+      client = connect({clientId: 'testclient'})
       client.on('error', function (err) {
         throw err
       })
@@ -195,9 +210,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit connect', function (done) {
-      var client = connect()
+      client = connect()
       client.once('connect', function () {
-        client.end()
         done()
       })
       client.once('error', done)
@@ -212,21 +226,19 @@ module.exports = function (server, config) {
         })
       })
 
-      var client = connect()
+      client = connect()
       client.once('connect', function (packet) {
         should(packet.sessionPresent).be.equal(true)
         client.once('connect', function (packet) {
           should(packet.sessionPresent).be.equal(false)
-          client.end()
           done()
         })
       })
     })
 
     it('should mark the client as connected', function (done) {
-      var client = connect()
+      client = connect()
       client.once('connect', function () {
-        client.end()
         if (client.connected) {
           done()
         } else {
@@ -236,13 +248,12 @@ module.exports = function (server, config) {
     })
 
     it('should emit error', function (done) {
-      var client = connect({clientId: 'invalid'})
+      client = connect({clientId: 'invalid'})
       client.once('connect', function () {
         done(new Error('Should not emit connect'))
       })
       client.once('error', function (error) {
         should(error.code).be.equal(2) // code for clientID identifer rejected
-        client.end()
         done()
       })
     })
@@ -252,9 +263,9 @@ module.exports = function (server, config) {
       var client2 = connect()
 
       client1.options.clientId.should.not.equal(client2.options.clientId)
-      client1.end(true)
-      client2.end(true)
-      setImmediate(done)
+      client1.end(function () {
+        client2.end(done)
+      })
     })
   })
 

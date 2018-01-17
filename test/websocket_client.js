@@ -26,7 +26,7 @@ function attachWebsocketServer (wsServer) {
   return wsServer
 }
 
-attachWebsocketServer(server)
+attachWebsocketServer(server).unref()
 
 server.on('client', function (client) {
   client.on('connect', function (packet) {

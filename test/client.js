@@ -77,6 +77,9 @@ function buildServer () {
 server = buildServer().listen(port)
 
 describe('MqttClient', function () {
+  after(function () {
+    server.destroy()
+  })
   describe('creating', function () {
     it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
       should(function () {
@@ -280,10 +283,10 @@ describe('MqttClient', function () {
       })
     })
 
-    it('shoud not be cleared by the connack timer', function (done) {
-      this.timeout(4000)
+    it('should not be cleared by the connack timer', function (done) {
+      this.timeout(5000)
 
-      var server2 = net.createServer().listen(port + 44)
+      var server2 = Server.simpleServer().listen(port + 44)
 
       server2.on('connection', function (c) {
         c.destroy()
@@ -302,9 +305,10 @@ describe('MqttClient', function () {
         })
 
         client.on('reconnect', function () {
-          reconnects++
+          console.log(reconnects++)
           if (reconnects >= expectedReconnects) {
             client.end()
+            server2.destroy()
             done()
           }
         })
@@ -406,7 +410,7 @@ describe('MqttClient', function () {
 
       var port2 = port + 48
 
-      var server2 = net.createServer(function (stream) {
+      var server2 = Server.simpleServer(function (stream) {
         var client = new Connection(stream)
 
         client.on('error', function () {})
@@ -429,6 +433,7 @@ describe('MqttClient', function () {
         setTimeout(function () {
           client.queue.length.should.equal(1)
           client.end()
+          server2.destroy()
           done()
         }, 1000)
       })
@@ -447,7 +452,7 @@ describe('MqttClient', function () {
         reconnectPeriod: 300
       })
 
-      var server2 = net.createServer(function (stream) {
+      var server2 = Server.simpleServer(function (stream) {
         var client = new Connection(stream)
         client.on('error', function () {})
         client.on('connect', function (packet) {
@@ -463,10 +468,10 @@ describe('MqttClient', function () {
 
       server2.on('client', function (c) {
         client.publish('topic', 'data', { qos: 1 }, function () {
-          done()
           client.end(true)
           c.destroy()
           server2.destroy()
+          done()
         })
 
         c.on('publish', function onPublish (packet) {
